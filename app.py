@@ -7,18 +7,10 @@ import operator
 from datetime import datetime
 
 
-# ============================================================
-# X AI - CONFIGURATION
-# ============================================================
-
 APP_NAME = "X AI"
 MODEL = "llama3.2:3b"
 OLLAMA_URL = "http://localhost:11434/api/chat"
 
-
-# ============================================================
-# PAGE CONFIG
-# ============================================================
 
 st.set_page_config(
     page_title="X AI",
@@ -30,142 +22,115 @@ st.set_page_config(
 
 # ============================================================
 # CSS
-# IMPORTANT: ALL CSS IS INSIDE THIS STRING
 # ============================================================
 
-st.markdown(
-    """
-    <style>
+st.markdown("""
+<style>
 
-    /* Main page */
-    .stApp {
-        background: #080b10;
-        color: #f5f7fa;
-    }
+.stApp {
+    background-color: #080b10;
+    color: #f5f7fa;
+}
 
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background: #10151c;
-        border-right: 1px solid #252d38;
-    }
+section[data-testid="stSidebar"] {
+    background-color: #10151c;
+}
 
-    /* Sidebar logo */
-    .x-logo {
-        font-size: 58px;
-        font-weight: 800;
-        color: white;
-        line-height: 1;
-        margin-top: 5px;
-        margin-bottom: 4px;
-    }
+.sidebar-x {
+    font-size: 64px;
+    font-weight: 900;
+    text-align: center;
+    color: white;
+    margin-top: 10px;
+}
 
-    .x-subtitle {
-        color: #9ba3af;
-        font-size: 14px;
-        margin-bottom: 28px;
-    }
+.sidebar-subtitle {
+    text-align: center;
+    color: #9ba3af;
+    font-size: 14px;
+    margin-bottom: 25px;
+}
 
-    /* Main welcome card */
-    .welcome-card {
-        background: #10151c;
-        border: 1px solid #293342;
-        border-radius: 18px;
-        padding: 45px 35px;
-        margin-bottom: 30px;
-        text-align: center;
-    }
+.welcome-box {
+    background-color: #10151c;
+    border: 1px solid #293342;
+    border-radius: 18px;
+    padding: 45px;
+    text-align: center;
+    margin-bottom: 30px;
+}
 
-    .welcome-x {
-        font-size: 72px;
-        font-weight: 800;
-        color: white;
-        margin-bottom: 10px;
-    }
+.big-x {
+    font-size: 72px;
+    font-weight: 900;
+    color: white;
+}
 
-    .welcome-title {
-        font-size: 30px;
-        font-weight: 700;
-        color: white;
-        margin-bottom: 12px;
-    }
+.welcome-title {
+    font-size: 30px;
+    font-weight: 700;
+    color: white;
+}
 
-    .welcome-text {
-        font-size: 16px;
-        color: #9ba3af;
-        line-height: 1.7;
-    }
+.welcome-text {
+    color: #9ba3af;
+    font-size: 16px;
+    line-height: 1.7;
+}
 
-    /* Quick Start */
-    .quick-title {
-        font-size: 23px;
-        font-weight: 700;
-        color: white;
-        margin-bottom: 15px;
-    }
+.quick-title {
+    font-size: 23px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 15px;
+}
 
-    /* Chat bubbles */
-    .user-message {
-        background: #18202a;
-        border: 1px solid #293342;
-        border-radius: 14px;
-        padding: 15px 18px;
-        margin: 10px 0;
-    }
+.user-box {
+    background-color: #18202a;
+    border: 1px solid #293342;
+    border-radius: 14px;
+    padding: 15px;
+    margin: 10px 0;
+}
 
-    .assistant-message {
-        background: #10151c;
-        border: 1px solid #293342;
-        border-radius: 14px;
-        padding: 15px 18px;
-        margin: 10px 0 20px 0;
-    }
+.ai-box {
+    background-color: #10151c;
+    border: 1px solid #293342;
+    border-radius: 14px;
+    padding: 15px;
+    margin: 10px 0 20px 0;
+}
 
-    .message-label {
-        font-size: 12px;
-        font-weight: 700;
-        color: #9ba3af;
-        margin-bottom: 7px;
-        text-transform: uppercase;
-    }
+.label {
+    color: #9ba3af;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 7px;
+}
 
-    /* Sidebar chat names */
-    .chat-label {
-        color: #dce1e8;
-        font-size: 14px;
-        padding: 5px 0;
-    }
+.stButton > button {
+    background-color: #151c25;
+    color: white;
+    border: 1px solid #303a48;
+    border-radius: 10px;
+    min-height: 42px;
+}
 
-    /* Buttons */
-    .stButton > button {
-        border-radius: 10px;
-        border: 1px solid #303a48;
-        background: #151c25;
-        color: #f5f7fa;
-        min-height: 42px;
-    }
+.stButton > button:hover {
+    border-color: #657185;
+    color: white;
+}
 
-    .stButton > button:hover {
-        border-color: #657185;
-        color: white;
-    }
+#MainMenu {
+    visibility: hidden;
+}
 
-    /* Hide Streamlit decoration */
-    #MainMenu {
-        visibility: hidden;
-    }
+footer {
+    visibility: hidden;
+}
 
-    footer {
-        visibility: hidden;
-    }
-
-    header {
-        background: transparent;
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+</style>
+""", unsafe_allow_html=True)
 
 
 # ============================================================
@@ -184,54 +149,78 @@ if "current_chat" not in st.session_state:
 # ============================================================
 
 def create_new_chat():
-    chat_number = len(st.session_state.chats) + 1
+
+    number = len(st.session_state.chats) + 1
 
     chat = {
-        "name": f"New Chat {chat_number}",
+        "name": "New Chat " + str(number),
         "messages": []
     }
 
     st.session_state.chats.append(chat)
-    st.session_state.current_chat = len(st.session_state.chats) - 1
+
+    st.session_state.current_chat = (
+        len(st.session_state.chats) - 1
+    )
 
 
 def get_current_chat():
+
     if st.session_state.current_chat is None:
         return None
 
-    if st.session_state.current_chat >= len(st.session_state.chats):
+    index = st.session_state.current_chat
+
+    if index < 0:
         return None
 
-    return st.session_state.chats[st.session_state.current_chat]
+    if index >= len(st.session_state.chats):
+        return None
+
+    return st.session_state.chats[index]
 
 
 def delete_chat(index):
-    if 0 <= index < len(st.session_state.chats):
 
-        st.session_state.chats.pop(index)
+    if index < 0:
+        return
 
-        if len(st.session_state.chats) == 0:
-            st.session_state.current_chat = None
+    if index >= len(st.session_state.chats):
+        return
 
-        elif st.session_state.current_chat >= len(st.session_state.chats):
-            st.session_state.current_chat = len(st.session_state.chats) - 1
+    st.session_state.chats.pop(index)
+
+    if len(st.session_state.chats) == 0:
+
+        st.session_state.current_chat = None
+
+    elif st.session_state.current_chat >= len(
+        st.session_state.chats
+    ):
+
+        st.session_state.current_chat = (
+            len(st.session_state.chats) - 1
+        )
 
 
-def rename_chat_if_needed(chat, first_message):
-    if len(chat["messages"]) == 1:
-        name = first_message.strip()
+def rename_chat(chat, message):
 
-        if len(name) > 28:
-            name = name[:28] + "..."
+    if len(chat["messages"]) != 1:
+        return
 
-        chat["name"] = name
+    name = message.strip()
+
+    if len(name) > 28:
+        name = name[:28] + "..."
+
+    chat["name"] = name
 
 
 # ============================================================
 # CALCULATOR
 # ============================================================
 
-ALLOWED_OPERATORS = {
+OPERATORS = {
     ast.Add: operator.add,
     ast.Sub: operator.sub,
     ast.Mult: operator.mul,
@@ -239,14 +228,16 @@ ALLOWED_OPERATORS = {
     ast.Pow: operator.pow,
     ast.Mod: operator.mod,
     ast.USub: operator.neg,
-    ast.UAdd: operator.pos,
+    ast.UAdd: operator.pos
 }
 
 
 def safe_calculate(expression):
-    expression = expression.strip()
 
-    tree = ast.parse(expression, mode="eval")
+    tree = ast.parse(
+        expression.strip(),
+        mode="eval"
+    )
 
     def calculate(node):
 
@@ -254,31 +245,40 @@ def safe_calculate(expression):
             return calculate(node.body)
 
         if isinstance(node, ast.Constant):
+
             if isinstance(node.value, (int, float)):
                 return node.value
 
+            raise ValueError()
+
         if isinstance(node, ast.BinOp):
+
             left = calculate(node.left)
             right = calculate(node.right)
 
-            operation = ALLOWED_OPERATORS.get(type(node.op))
+            operation = OPERATORS.get(
+                type(node.op)
+            )
 
             if operation is None:
-                raise ValueError("Operator not allowed")
+                raise ValueError()
 
             return operation(left, right)
 
         if isinstance(node, ast.UnaryOp):
+
             value = calculate(node.operand)
 
-            operation = ALLOWED_OPERATORS.get(type(node.op))
+            operation = OPERATORS.get(
+                type(node.op)
+            )
 
             if operation is None:
-                raise ValueError("Operator not allowed")
+                raise ValueError()
 
             return operation(value)
 
-        raise ValueError("Invalid calculation")
+        raise ValueError()
 
     return calculate(tree)
 
@@ -287,47 +287,72 @@ def safe_calculate(expression):
 # LOCAL COMMANDS
 # ============================================================
 
-def handle_local_command(message):
+def local_command(message):
 
     text = message.strip()
     lower = text.lower()
 
-    # Time
-    if lower in ["/time", "time", "what is the time", "current time"]:
-        return "The current local time is " + datetime.now().strftime("%I:%M:%S %p")
 
-    # Date
-    if lower in ["/date", "date", "today", "what is today's date"]:
-        return "Today's date is " + datetime.now().strftime("%d %B %Y")
+    if lower in [
+        "/time",
+        "time",
+        "current time",
+        "what is the time"
+    ]:
 
-    # Calculator
+        return (
+            "The current local time is "
+            + datetime.now().strftime(
+                "%I:%M:%S %p"
+            )
+        )
+
+
+    if lower in [
+        "/date",
+        "date",
+        "today",
+        "what is today's date"
+    ]:
+
+        return (
+            "Today's date is "
+            + datetime.now().strftime(
+                "%d %B %Y"
+            )
+        )
+
+
     if lower.startswith("/calc "):
 
-        expression = text[6:].strip()
+        expression = text[6:]
 
         try:
-            answer = safe_calculate(expression)
-            return f"Answer: {answer}"
-        except Exception:
-            return "I couldn't calculate that. Try something like: /calc 25*4+10"
 
-    # Help
+            answer = safe_calculate(
+                expression
+            )
+
+            return "Answer: " + str(answer)
+
+        except Exception:
+
+            return (
+                "I couldn't calculate that.\n\n"
+                "Example: /calc 25*4+10"
+            )
+
+
     if lower in ["/help", "help"]:
 
-        return """
-### X AI Commands
+        return (
+            "X AI Commands\n\n"
+            "/time - current time\n\n"
+            "/date - today's date\n\n"
+            "/calc 25*4+10 - calculator\n\n"
+            "You can also ask normal questions."
+        )
 
-**Time**
-`/time`
-
-**Date**
-`/date`
-
-**Calculator**
-`/calc 25*4+10`
-
-You can also simply ask me normal questions.
-"""
 
     return None
 
@@ -344,7 +369,9 @@ def ask_ollama(messages):
         "stream": False
     }
 
-    data = json.dumps(payload).encode("utf-8")
+    data = json.dumps(payload).encode(
+        "utf-8"
+    )
 
     request = urllib.request.Request(
         OLLAMA_URL,
@@ -355,28 +382,59 @@ def ask_ollama(messages):
         method="POST"
     )
 
+
     try:
 
-        with urllib.request.urlopen(request, timeout=120) as response:
+        with urllib.request.urlopen(
+            request,
+            timeout=120
+        ) as response:
 
-            result = json.loads(response.read().decode("utf-8"))
+            result = json.loads(
+                response.read().decode(
+                    "utf-8"
+                )
+            )
 
-            if "message" in result and "content" in result["message"]:
+
+        if "message" in result:
+
+            if "content" in result["message"]:
+
                 return result["message"]["content"]
 
-            return "X AI received an unexpected response from Ollama."
+
+        if "error" in result:
+
+            return (
+                "Ollama error: "
+                + str(result["error"])
+            )
+
+
+        return (
+            "X AI received an unexpected "
+            "response from Ollama."
+        )
+
 
     except urllib.error.URLError:
 
         return (
-            "I can't connect to Ollama right now.\n\n"
-            "Please make sure Ollama is running and that the "
-            f"`{MODEL}` model is installed."
+            "I cannot connect to Ollama.\n\n"
+            "Make sure Ollama is running and "
+            "the model "
+            + MODEL
+            + " is installed."
         )
+
 
     except Exception as error:
 
-        return f"X AI connection error: {error}"
+        return (
+            "X AI connection error: "
+            + str(error)
+        )
 
 
 # ============================================================
@@ -384,20 +442,32 @@ def ask_ollama(messages):
 # ============================================================
 
 SYSTEM_PROMPT = """
-You are X AI, a helpful personal AI assistant.
+You are X AI.
 
-Your goals:
+You are a helpful personal AI assistant.
 
-1. Give clear and useful answers.
-2. Help with programming.
-3. Help students study.
-4. Explain difficult topics simply.
-5. Help with Python, C, HTML, CSS and JavaScript.
-6. Help with AutoCAD and technical subjects.
-7. Show calculations clearly.
-8. Be friendly and concise.
-9. If the user asks for code, provide complete working code.
-10. Do not pretend to have internet access when you do not.
+Help the user with:
+
+Programming
+Python
+C
+HTML
+CSS
+JavaScript
+AutoCAD
+Mathematics
+Science
+English
+Study topics
+General questions
+
+Explain difficult topics simply.
+
+Give complete working code when code is requested.
+
+Be friendly, useful and concise.
+
+Do not pretend that you have internet access.
 """
 
 
@@ -405,9 +475,10 @@ Your goals:
 # ASK X
 # ============================================================
 
-def ask_x(user_message):
+def ask_x(message):
 
     chat = get_current_chat()
+
 
     if chat is None:
 
@@ -415,48 +486,60 @@ def ask_x(user_message):
 
         chat = get_current_chat()
 
-    # Save user message
+
     chat["messages"].append(
         {
             "role": "user",
-            "content": user_message
+            "content": message
         }
     )
 
-    rename_chat_if_needed(chat, user_message)
 
-    # Check local commands first
-    local_answer = handle_local_command(user_message)
+    rename_chat(
+        chat,
+        message
+    )
 
-    if local_answer is not None:
+
+    answer = local_command(
+        message
+    )
+
+
+    if answer is not None:
 
         chat["messages"].append(
             {
                 "role": "assistant",
-                "content": local_answer
+                "content": answer
             }
         )
 
-        return local_answer
+        return
 
-    # Prepare messages for Ollama
-    ollama_messages = [
+
+    messages = [
         {
             "role": "system",
             "content": SYSTEM_PROMPT
         }
     ]
 
-    for message in chat["messages"]:
 
-        ollama_messages.append(
+    for item in chat["messages"]:
+
+        messages.append(
             {
-                "role": message["role"],
-                "content": message["content"]
+                "role": item["role"],
+                "content": item["content"]
             }
         )
 
-    answer = ask_ollama(ollama_messages)
+
+    answer = ask_ollama(
+        messages
+    )
+
 
     chat["messages"].append(
         {
@@ -465,8 +548,6 @@ def ask_x(user_message):
         }
     )
 
-    return answer
-
 
 # ============================================================
 # SIDEBAR
@@ -474,15 +555,16 @@ def ask_x(user_message):
 
 with st.sidebar:
 
+    # Normal Streamlit text.
+    # No HTML is used for the logo.
     st.markdown(
-        '<div class="x-logo">X</div>',
-        unsafe_allow_html=True
+        "## X"
     )
 
-    st.markdown(
-        '<div class="x-subtitle">Personal Local AI</div>',
-        unsafe_allow_html=True
+    st.caption(
+        "Personal Local AI"
     )
+
 
     if st.button(
         "+ New Chat",
@@ -490,51 +572,77 @@ with st.sidebar:
     ):
 
         create_new_chat()
+
         st.rerun()
 
-    st.markdown("---")
 
-    st.markdown("### Chats")
+    st.divider()
+
+    st.markdown(
+        "### Chats"
+    )
+
 
     if len(st.session_state.chats) == 0:
 
-        st.caption("No chats yet.")
+        st.caption(
+            "No chats yet."
+        )
+
 
     else:
 
-        for index, chat in enumerate(st.session_state.chats):
+        for index, item in enumerate(
+            st.session_state.chats
+        ):
 
-            col1, col2 = st.columns([5, 1])
+            col1, col2 = st.columns(
+                [5, 1]
+            )
+
 
             with col1:
 
                 if st.button(
-                    chat["name"],
-                    key=f"open_chat_{index}",
+                    item["name"],
+                    key="chat_" + str(index),
                     use_container_width=True
                 ):
 
                     st.session_state.current_chat = index
+
                     st.rerun()
+
 
             with col2:
 
                 if st.button(
-                    "×",
-                    key=f"delete_chat_{index}"
+                    "X",
+                    key="delete_" + str(index)
                 ):
 
                     delete_chat(index)
+
                     st.rerun()
 
-    st.markdown("---")
 
-    st.markdown("### X AI")
+    st.divider()
 
-    st.caption(f"Model: {MODEL}")
-    st.caption("Engine: Ollama • Local")
+    st.markdown(
+        "### X AI"
+    )
 
-    st.markdown("---")
+    st.caption(
+        "Model: " + MODEL
+    )
+
+    st.caption(
+        "Engine: Ollama • Local"
+    )
+
+
+    st.divider()
+
 
     if st.button(
         "Clear All Chats",
@@ -542,49 +650,49 @@ with st.sidebar:
     ):
 
         st.session_state.chats = []
+
         st.session_state.current_chat = None
+
         st.rerun()
 
 
 # ============================================================
-# MAIN AREA
+# MAIN
 # ============================================================
 
 chat = get_current_chat()
 
 
 # ============================================================
-# WELCOME SCREEN
+# WELCOME
 # ============================================================
 
-if chat is None or len(chat["messages"]) == 0:
+if chat is None or len(
+    chat["messages"]
+) == 0:
 
     st.markdown(
-        """
-        <div class="welcome-card">
-
-            <div class="welcome-x">X</div>
-
-            <div class="welcome-title">
-                How can I help you?
-            </div>
-
-            <div class="welcome-text">
-                Ask questions, learn something new,
-                write code, solve problems or study with X AI.
-            </div>
-
-        </div>
-        """,
-        unsafe_allow_html=True
+        "## X"
     )
 
     st.markdown(
-        '<div class="quick-title">Quick Start</div>',
-        unsafe_allow_html=True
+        "### How can I help you?"
     )
+
+    st.write(
+        "Ask questions, learn something new, "
+        "write code, solve problems or study "
+        "with X AI."
+    )
+
+
+    st.markdown(
+        "### Quick Start"
+    )
+
 
     col1, col2 = st.columns(2)
+
 
     with col1:
 
@@ -595,15 +703,13 @@ if chat is None or len(chat["messages"]) == 0:
 
             create_new_chat()
 
-            st.session_state.current_chat = (
-                len(st.session_state.chats) - 1
-            )
-
             ask_x(
-                "Teach me Python programming from beginner level."
+                "Teach me Python programming "
+                "from beginner level."
             )
 
             st.rerun()
+
 
     with col2:
 
@@ -614,17 +720,16 @@ if chat is None or len(chat["messages"]) == 0:
 
             create_new_chat()
 
-            st.session_state.current_chat = (
-                len(st.session_state.chats) - 1
-            )
-
             ask_x(
-                "Help me study. Ask me what subject and topic I want to learn."
+                "Help me study. Ask me what "
+                "subject and topic I want to learn."
             )
 
             st.rerun()
 
+
     col3, col4 = st.columns(2)
+
 
     with col3:
 
@@ -635,15 +740,13 @@ if chat is None or len(chat["messages"]) == 0:
 
             create_new_chat()
 
-            st.session_state.current_chat = (
-                len(st.session_state.chats) - 1
-            )
-
             ask_x(
-                "Teach me one interesting and useful concept."
+                "Teach me one interesting "
+                "and useful concept."
             )
 
             st.rerun()
+
 
     with col4:
 
@@ -654,10 +757,6 @@ if chat is None or len(chat["messages"]) == 0:
 
             create_new_chat()
 
-            st.session_state.current_chat = (
-                len(st.session_state.chats) - 1
-            )
-
             ask_x(
                 "Help me learn AutoCAD basics."
             )
@@ -666,7 +765,7 @@ if chat is None or len(chat["messages"]) == 0:
 
 
 # ============================================================
-# CHAT DISPLAY
+# CHAT MESSAGES
 # ============================================================
 
 if chat is not None:
@@ -675,23 +774,20 @@ if chat is not None:
 
         if message["role"] == "user":
 
-            st.markdown(
-                '<div class="user-message">'
-                '<div class="message-label">You</div>'
-                + message["content"]
-                + "</div>",
-                unsafe_allow_html=True
-            )
+            with st.chat_message("user"):
+
+                st.write(
+                    message["content"]
+                )
+
 
         else:
 
-            st.markdown(
-                '<div class="assistant-message">'
-                '<div class="message-label">X AI</div>'
-                + message["content"].replace("\n", "<br>")
-                + "</div>",
-                unsafe_allow_html=True
-            )
+            with st.chat_message("assistant"):
+
+                st.write(
+                    message["content"]
+                )
 
 
 # ============================================================
@@ -705,6 +801,8 @@ user_input = st.chat_input(
 
 if user_input:
 
-    ask_x(user_input)
+    ask_x(
+        user_input
+    )
 
     st.rerun()
