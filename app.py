@@ -36,7 +36,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
+st.markdown(
+    '<meta name="google-site-verification" content="SJwh_ybk4DHSGghRTVdXPr5GVZeRA4lYvEGmVhFvtbU" />',
+    unsafe_allow_html=True,
+)
 # ============================================================
 # CSS
 # ============================================================
