@@ -6,7 +6,7 @@ import operator
 
 
 # ============================================================
-# X AI
+# X AI CONFIGURATION
 # ============================================================
 
 MODEL = "openai/gpt-oss-20b"
@@ -17,7 +17,7 @@ You are X AI, a helpful personal AI assistant.
 Your name is X AI.
 
 Be friendly, clear, accurate, and useful.
-Answer in a simple way when the user asks simple questions.
+Give simple explanations when the user asks simple questions.
 For school questions, explain step by step.
 For programming questions, provide correct and practical code.
 Do not pretend to have access to information you do not have.
@@ -26,22 +26,19 @@ If you are unsure, say so clearly.
 
 
 # ============================================================
-# PAGE
+# PAGE CONFIG
 # ============================================================
 
 st.set_page_config(
-    page_title="X AI",
+    page_title="X AI - Personal AI Assistant",
     page_icon="X",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.markdown(
-    '<meta name="google-site-verification" content="SJwh_ybk4DHSGghRTVdXPr5GVZeRA4lYvEGmVhFvtbU" />',
-    unsafe_allow_html=True,
-)
+
 # ============================================================
-# CSS
+# CUSTOM CSS
 # ============================================================
 
 st.markdown(
@@ -68,6 +65,14 @@ st.markdown(
         color: #9ca3af;
         font-size: 16px;
         margin-top: 2px;
+        margin-bottom: 25px;
+    }
+
+    .seo-description {
+        color: #b8bec9;
+        font-size: 15px;
+        line-height: 1.6;
+        margin-top: -15px;
         margin-bottom: 25px;
     }
 
@@ -122,7 +127,7 @@ if "current_chat" not in st.session_state:
 
 
 # ============================================================
-# HELPER FUNCTIONS
+# CHAT HELPERS
 # ============================================================
 
 def get_current_messages():
@@ -133,10 +138,12 @@ def get_current_messages():
 
 def create_new_chat():
     number = 1
+
     while f"New Chat {number}" in st.session_state.chats:
         number += 1
 
     name = f"New Chat {number}"
+
     st.session_state.chats[name] = []
     st.session_state.current_chat = name
 
@@ -147,11 +154,11 @@ def clear_current_chat():
     ] = []
 
 
-def safe_calculate(expression):
-    """
-    Safe calculator for basic arithmetic.
-    """
+# ============================================================
+# SAFE CALCULATOR
+# ============================================================
 
+def safe_calculate(expression):
     allowed_operators = {
         ast.Add: operator.add,
         ast.Sub: operator.sub,
@@ -169,12 +176,14 @@ def safe_calculate(expression):
         if isinstance(node, ast.Constant):
             if isinstance(node.value, (int, float)):
                 return node.value
+
             raise ValueError("Invalid number")
 
         if isinstance(node, ast.Num):
             return node.n
 
         if isinstance(node, ast.BinOp):
+
             if type(node.op) not in allowed_operators:
                 raise ValueError("Operator not allowed")
 
@@ -187,6 +196,7 @@ def safe_calculate(expression):
             )
 
         if isinstance(node, ast.UnaryOp):
+
             if type(node.op) not in allowed_operators:
                 raise ValueError("Operator not allowed")
 
@@ -197,14 +207,15 @@ def safe_calculate(expression):
         raise ValueError("Invalid expression")
 
     tree = ast.parse(expression, mode="eval")
+
     return evaluate(tree.body)
 
 
+# ============================================================
+# LOCAL COMMANDS
+# ============================================================
+
 def local_command(message):
-    """
-    Handles X AI's local commands.
-    Returns None when the message is not a local command.
-    """
 
     text = message.strip()
 
@@ -232,45 +243,67 @@ def local_command(message):
 """
 
     if text.lower().startswith("/calc"):
+
         expression = text[5:].strip()
 
         if not expression:
-            return "Please use the calculator like this: `/calc 25*4`"
+            return (
+                "Please use the calculator like this: "
+                "`/calc 25*4`"
+            )
 
         try:
+
             result = safe_calculate(expression)
+
             return f"Result: **{result}**"
+
         except Exception:
-            return "I couldn't calculate that expression. Try something like `/calc 25*4`."
+
+            return (
+                "I couldn't calculate that expression. "
+                "Try something like `/calc 25*4`."
+            )
 
     return None
 
 
 # ============================================================
-# GROQ
+# GROQ CLIENT
 # ============================================================
 
 def get_groq_client():
 
-    if "GROQ_API_KEY" not in st.secrets:
+    try:
+
+        api_key = st.secrets["GROQ_API_KEY"]
+
+        if not api_key:
+            return None
+
+        return Groq(api_key=api_key)
+
+    except Exception:
+
         return None
 
-    api_key = st.secrets["GROQ_API_KEY"]
 
-    if not api_key:
-        return None
-
-    return Groq(api_key=api_key)
-
+# ============================================================
+# ASK X AI
+# ============================================================
 
 def ask_x(user_message):
 
     messages = get_current_messages()
 
-    # Local commands first
+    # --------------------------------------------------------
+    # LOCAL COMMANDS
+    # --------------------------------------------------------
+
     local_reply = local_command(user_message)
 
     if local_reply is not None:
+
         messages.append(
             {
                 "role": "user",
@@ -287,21 +320,25 @@ def ask_x(user_message):
 
         return local_reply
 
-    # Add user message
+    # --------------------------------------------------------
+    # GROQ
+    # --------------------------------------------------------
+
+    client = get_groq_client()
+
+    if client is None:
+
+        return (
+            "X AI cannot find GROQ_API_KEY. "
+            "Please check Streamlit Cloud → Settings → Secrets."
+        )
+
     messages.append(
         {
             "role": "user",
             "content": user_message
         }
     )
-
-    client = get_groq_client()
-
-    if client is None:
-        return (
-            "X AI cannot find GROQ_API_KEY. "
-            "Please add GROQ_API_KEY in Streamlit Cloud → Settings → Secrets."
-        )
 
     api_messages = [
         {
@@ -319,13 +356,14 @@ def ask_x(user_message):
             messages=api_messages,
             temperature=0.6,
             max_completion_tokens=2048,
-            reasoning_effort="low",
         )
 
         answer = response.choices[0].message.content
 
         if not answer:
-            answer = "I didn't receive a response from the model."
+            answer = (
+                "I didn't receive a response from the model."
+            )
 
         messages.append(
             {
@@ -338,13 +376,13 @@ def ask_x(user_message):
 
     except Exception as e:
 
-        # Remove the user message if the API request failed
         if messages and messages[-1]["role"] == "user":
             messages.pop()
 
-        error_text = str(e)
-
-        return f"Groq connection error:\n\n`{error_text}`"
+        return (
+            "Groq connection error:\n\n"
+            f"`{str(e)}`"
+        )
 
 
 # ============================================================
@@ -368,7 +406,9 @@ with st.sidebar:
         create_new_chat()
         st.rerun()
 
-    chat_names = list(st.session_state.chats.keys())
+    chat_names = list(
+        st.session_state.chats.keys()
+    )
 
     selected_chat = st.selectbox(
         "Your chats",
@@ -380,7 +420,9 @@ with st.sidebar:
     )
 
     if selected_chat != st.session_state.current_chat:
+
         st.session_state.current_chat = selected_chat
+
         st.rerun()
 
     st.divider()
@@ -417,13 +459,24 @@ with st.sidebar:
 # ============================================================
 
 st.markdown(
-    '<div class="x-title">X</div>',
+    '<div class="x-title">X AI - Personal AI Assistant</div>',
     unsafe_allow_html=True
 )
 
 st.markdown(
     '<div class="x-subtitle">Personal Cloud AI</div>',
     unsafe_allow_html=True
+)
+
+st.markdown(
+    """
+    <div class="seo-description">
+        X AI is a personal AI assistant for chatting, learning,
+        coding, studying, programming help, and everyday questions,
+        powered by Groq Cloud.
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 
@@ -442,7 +495,8 @@ if len(messages) == 0:
         <h2>Welcome to X AI</h2>
 
         <p>
-        Your personal AI assistant powered by Groq Cloud.
+        Your personal AI assistant for learning, coding,
+        studying, and everyday questions.
         </p>
 
         </div>
@@ -455,51 +509,63 @@ if len(messages) == 0:
     col1, col2, col3 = st.columns(3)
 
     with col1:
+
         if st.button(
             "Explain Python",
             use_container_width=True
         ):
+
             st.session_state.pending_prompt = (
                 "Teach me Python programming from the basics "
                 "with simple examples."
             )
+
             st.rerun()
 
     with col2:
+
         if st.button(
             "Help me study",
             use_container_width=True
         ):
+
             st.session_state.pending_prompt = (
                 "Help me study. Ask me what subject and topic "
                 "I want to learn, then teach it step by step."
             )
+
             st.rerun()
 
     with col3:
+
         if st.button(
             "Teach me something",
             use_container_width=True
         ):
+
             st.session_state.pending_prompt = (
                 "Teach me one interesting and useful concept "
                 "in a simple way."
             )
+
             st.rerun()
 
 
 # ============================================================
-# DISPLAY CHAT
+# DISPLAY CHAT HISTORY
 # ============================================================
 
 for message in messages:
 
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+
+        st.markdown(
+            message["content"]
+        )
 
 
 # ============================================================
-# PENDING QUICK-START PROMPT
+# QUICK-START PROMPT
 # ============================================================
 
 if "pending_prompt" in st.session_state:
@@ -516,9 +582,8 @@ if "pending_prompt" in st.session_state:
         answer = ask_x(prompt)
 
     with st.chat_message("assistant"):
-        st.markdown(answer)
 
-    st.rerun()
+        st.markdown(answer)
 
 
 # ============================================================
@@ -529,10 +594,10 @@ user_input = st.chat_input(
     "Message X AI..."
 )
 
-
 if user_input:
 
     with st.chat_message("user"):
+
         st.markdown(user_input)
 
     with st.spinner("X is thinking..."):
@@ -540,4 +605,5 @@ if user_input:
         answer = ask_x(user_input)
 
     with st.chat_message("assistant"):
+
         st.markdown(answer)
