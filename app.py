@@ -1,468 +1,362 @@
-﻿import streamlit as st
-import urllib.request
-import urllib.error
-import json
+import streamlit as st
+from groq import Groq
+from datetime import datetime
 import ast
 import operator
-from datetime import datetime
 
-APP_NAME = "X AI"
-MODEL = "llama-3.1-8b-instant"
-GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+# ============================================================
+# X AI
+# ============================================================
+
+MODEL = "openai/gpt-oss-20b"
+
+SYSTEM_PROMPT = """
+You are X AI, a helpful personal AI assistant.
+
+Your name is X AI.
+
+Be friendly, clear, accurate, and useful.
+Answer in a simple way when the user asks simple questions.
+For school questions, explain step by step.
+For programming questions, provide correct and practical code.
+Do not pretend to have access to information you do not have.
+If you are unsure, say so clearly.
+"""
+
+
+# ============================================================
+# PAGE
+# ============================================================
 
 st.set_page_config(
     page_title="X AI",
     page_icon="X",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
+
+
+# ============================================================
+# CSS
+# ============================================================
 
 st.markdown(
     """
     <style>
+
     .stApp {
-        background: #080b10;
-        color: #f5f7fa;
+        background: #0e1117;
     }
 
-    section[data-testid="stSidebar"] {
-        background: #10151c;
-        border-right: 1px solid #252d38;
+    .block-container {
+        max-width: 1200px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
     }
 
-    .x-logo {
-        font-size: 58px;
+    .x-title {
+        font-size: 42px;
         font-weight: 800;
-        color: white;
-        text-align: center;
-        line-height: 1;
-        margin: 5px 0 4px 0;
+        margin-bottom: 0;
     }
 
     .x-subtitle {
-        color: #9ba3af;
-        font-size: 14px;
-        text-align: center;
-        margin-bottom: 28px;
+        color: #9ca3af;
+        font-size: 16px;
+        margin-top: 2px;
+        margin-bottom: 25px;
     }
 
-    .welcome-card {
-        background: #10151c;
-        border: 1px solid #293342;
-        border-radius: 18px;
-        padding: 45px 35px;
-        margin-bottom: 30px;
-        text-align: center;
-    }
-
-    .welcome-x {
-        font-size: 72px;
-        font-weight: 800;
-        color: white;
-        margin-bottom: 10px;
-    }
-
-    .welcome-title {
-        font-size: 30px;
-        font-weight: 700;
-        color: white;
+    .info-card {
+        padding: 15px;
+        border-radius: 12px;
+        background: #171b23;
+        border: 1px solid #292f3a;
         margin-bottom: 12px;
     }
 
-    .welcome-text {
-        font-size: 16px;
-        color: #9ba3af;
-        line-height: 1.7;
+    .info-title {
+        font-size: 13px;
+        color: #9ca3af;
+        margin-bottom: 5px;
     }
 
-    .quick-title {
-        font-size: 23px;
-        font-weight: 700;
-        color: white;
-        margin-bottom: 15px;
+    .info-value {
+        font-size: 15px;
+        font-weight: 600;
     }
 
-    .user-message {
-        background: #18202a;
-        border: 1px solid #293342;
-        border-radius: 14px;
-        padding: 15px 18px;
-        margin: 10px 0;
+    .welcome {
+        padding: 25px;
+        border-radius: 16px;
+        background: #151922;
+        border: 1px solid #292f3a;
+        margin-bottom: 20px;
     }
 
-    .assistant-message {
-        background: #10151c;
-        border: 1px solid #293342;
-        border-radius: 14px;
-        padding: 15px 18px;
-        margin: 10px 0 20px 0;
+    .welcome h2 {
+        margin-top: 0;
     }
 
-    .message-label {
-        font-size: 12px;
-        font-weight: 700;
-        color: #9ba3af;
-        margin-bottom: 7px;
-        text-transform: uppercase;
-    }
-
-    .stButton > button {
-        border-radius: 10px;
-        border: 1px solid #303a48;
-        background: #151c25;
-        color: #f5f7fa;
-        min-height: 42px;
-    }
-
-    .stButton > button:hover {
-        border-color: #657185;
-        color: white;
-    }
-
-    #MainMenu {
-        visibility: hidden;
-    }
-
-    footer {
-        visibility: hidden;
-    }
-
-    header {
-        background: transparent;
-    }
     </style>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
+
+# ============================================================
+# SESSION STATE
+# ============================================================
+
 if "chats" not in st.session_state:
-    st.session_state.chats = []
+    st.session_state.chats = {
+        "New Chat": []
+    }
 
 if "current_chat" not in st.session_state:
-    st.session_state.current_chat = None
+    st.session_state.current_chat = "New Chat"
+
+
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
+
+def get_current_messages():
+    return st.session_state.chats[
+        st.session_state.current_chat
+    ]
 
 
 def create_new_chat():
-    number = len(st.session_state.chats) + 1
+    number = 1
+    while f"New Chat {number}" in st.session_state.chats:
+        number += 1
 
-    chat = {
-        "name": "New Chat " + str(number),
-        "messages": []
-    }
-
-    st.session_state.chats.append(chat)
-    st.session_state.current_chat = len(st.session_state.chats) - 1
+    name = f"New Chat {number}"
+    st.session_state.chats[name] = []
+    st.session_state.current_chat = name
 
 
-def get_current_chat():
-    index = st.session_state.current_chat
-
-    if index is None:
-        return None
-
-    if index < 0 or index >= len(st.session_state.chats):
-        return None
-
-    return st.session_state.chats[index]
-
-
-def delete_chat(index):
-    if index < 0 or index >= len(st.session_state.chats):
-        return
-
-    st.session_state.chats.pop(index)
-
-    if len(st.session_state.chats) == 0:
-        st.session_state.current_chat = None
-
-    elif st.session_state.current_chat >= len(st.session_state.chats):
-        st.session_state.current_chat = len(st.session_state.chats) - 1
-
-
-def rename_chat_if_needed(chat, message):
-    if len(chat["messages"]) != 1:
-        return
-
-    name = message.strip()
-
-    if len(name) > 28:
-        name = name[:28] + "..."
-
-    chat["name"] = name
-
-
-ALLOWED_OPERATORS = {
-    ast.Add: operator.add,
-    ast.Sub: operator.sub,
-    ast.Mult: operator.mul,
-    ast.Div: operator.truediv,
-    ast.Pow: operator.pow,
-    ast.Mod: operator.mod,
-    ast.USub: operator.neg,
-    ast.UAdd: operator.pos
-}
+def clear_current_chat():
+    st.session_state.chats[
+        st.session_state.current_chat
+    ] = []
 
 
 def safe_calculate(expression):
-    tree = ast.parse(expression.strip(), mode="eval")
+    """
+    Safe calculator for basic arithmetic.
+    """
 
-    def calculate(node):
-        if isinstance(node, ast.Expression):
-            return calculate(node.body)
+    allowed_operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.Pow: operator.pow,
+        ast.Mod: operator.mod,
+        ast.FloorDiv: operator.floordiv,
+        ast.USub: operator.neg,
+        ast.UAdd: operator.pos,
+    }
+
+    def evaluate(node):
 
         if isinstance(node, ast.Constant):
             if isinstance(node.value, (int, float)):
                 return node.value
+            raise ValueError("Invalid number")
+
+        if isinstance(node, ast.Num):
+            return node.n
 
         if isinstance(node, ast.BinOp):
-            left = calculate(node.left)
-            right = calculate(node.right)
-
-            operation = ALLOWED_OPERATORS.get(type(node.op))
-
-            if operation is None:
+            if type(node.op) not in allowed_operators:
                 raise ValueError("Operator not allowed")
 
-            return operation(left, right)
+            left = evaluate(node.left)
+            right = evaluate(node.right)
+
+            return allowed_operators[type(node.op)](
+                left,
+                right
+            )
 
         if isinstance(node, ast.UnaryOp):
-            value = calculate(node.operand)
-
-            operation = ALLOWED_OPERATORS.get(type(node.op))
-
-            if operation is None:
+            if type(node.op) not in allowed_operators:
                 raise ValueError("Operator not allowed")
 
-            return operation(value)
+            return allowed_operators[type(node.op)](
+                evaluate(node.operand)
+            )
 
-        raise ValueError("Invalid calculation")
+        raise ValueError("Invalid expression")
 
-    return calculate(tree)
+    tree = ast.parse(expression, mode="eval")
+    return evaluate(tree.body)
 
 
-def handle_local_command(message):
+def local_command(message):
+    """
+    Handles X AI's local commands.
+    Returns None when the message is not a local command.
+    """
+
     text = message.strip()
-    lower = text.lower()
 
-    if lower in [
-        "/time",
-        "time",
-        "what is the time",
-        "current time"
-    ]:
-        return (
-            "The current local time is "
-            + datetime.now().strftime("%I:%M:%S %p")
+    if text.lower() == "/time":
+        return datetime.now().strftime(
+            "The current local time is %I:%M:%S %p."
         )
 
-    if lower in [
-        "/date",
-        "date",
-        "today",
-        "what is today's date"
-    ]:
-        return (
-            "Today's date is "
-            + datetime.now().strftime("%d %B %Y")
+    if text.lower() == "/date":
+        return datetime.now().strftime(
+            "Today's date is %A, %d %B %Y."
         )
 
-    if lower.startswith("/calc "):
-        expression = text[6:].strip()
+    if text.lower() == "/help":
+        return """
+### X AI Commands
+
+`/time` — Show the current time.
+
+`/date` — Show today's date.
+
+`/calc 25*4` — Calculate a mathematical expression.
+
+`/help` — Show available commands.
+"""
+
+    if text.lower().startswith("/calc"):
+        expression = text[5:].strip()
+
+        if not expression:
+            return "Please use the calculator like this: `/calc 25*4`"
 
         try:
             result = safe_calculate(expression)
-            return "Answer: " + str(result)
-
+            return f"Result: **{result}**"
         except Exception:
-            return (
-                "I couldn't calculate that. "
-                "Try /calc 25*4+10"
-            )
-
-    if lower in ["/help", "help"]:
-        return (
-            "X AI Commands\n\n"
-            "/time - current time\n\n"
-            "/date - today's date\n\n"
-            "/calc 25*4+10 - calculator\n\n"
-            "You can also ask normal questions."
-        )
+            return "I couldn't calculate that expression. Try something like `/calc 25*4`."
 
     return None
 
 
-SYSTEM_PROMPT = (
-    "You are X AI, a helpful personal AI assistant. "
-    "Give clear and useful answers. "
-    "Help with programming and studying. "
-    "Explain difficult topics simply. "
-    "Help with Python, C, HTML, CSS and JavaScript. "
-    "Help with AutoCAD and technical subjects. "
-    "Show calculations clearly. "
-    "Be friendly and concise. "
-    "When asked for code, provide complete working code. "
-    "Do not claim to have abilities you do not have."
-)
+# ============================================================
+# GROQ
+# ============================================================
 
+def get_groq_client():
 
-def ask_groq(messages):
-    try:
-        api_key = st.secrets["GROQ_API_KEY"]
-    except Exception:
-        return (
-            "X AI is not connected to Groq yet.\n\n"
-            "Please add GROQ_API_KEY in Streamlit Cloud Secrets."
-        )
+    if "GROQ_API_KEY" not in st.secrets:
+        return None
 
-    payload = {
-        "model": MODEL,
-        "messages": messages,
-        "temperature": 0.3,
-        "max_tokens": 2048,
-        "stream": False
-    }
+    api_key = st.secrets["GROQ_API_KEY"]
 
-    data = json.dumps(payload).encode("utf-8")
+    if not api_key:
+        return None
 
-    request = urllib.request.Request(
-        GROQ_URL,
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + api_key
-        },
-        method="POST"
-    )
-
-    try:
-        with urllib.request.urlopen(
-            request,
-            timeout=120
-        ) as response:
-
-            result = json.loads(
-                response.read().decode("utf-8")
-            )
-
-        choices = result.get("choices", [])
-
-        if choices:
-            message = choices[0].get("message", {})
-            content = message.get("content")
-
-            if content:
-                return content
-
-        return "X AI received an unexpected response from Groq."
-
-    except urllib.error.HTTPError as error:
-        try:
-            details = error.read().decode("utf-8")
-        except Exception:
-            details = ""
-
-        if error.code == 401:
-            return (
-                "X AI could not authenticate with Groq.\n\n"
-                "Check GROQ_API_KEY in Streamlit Cloud Secrets."
-            )
-
-        if error.code == 429:
-            return (
-                "X AI reached the current Groq rate limit. "
-                "Please try again later."
-            )
-
-        return (
-            "Groq error "
-            + str(error.code)
-            + ":\n\n"
-            + details
-        )
-
-    except urllib.error.URLError:
-        return (
-            "X AI could not connect to the cloud AI service. "
-            "Please try again."
-        )
-
-    except Exception as error:
-        return (
-            "X AI connection error:\n\n"
-            + str(error)
-        )
+    return Groq(api_key=api_key)
 
 
 def ask_x(user_message):
-    chat = get_current_chat()
 
-    if chat is None:
-        create_new_chat()
-        chat = get_current_chat()
+    messages = get_current_messages()
 
-    chat["messages"].append(
+    # Local commands first
+    local_reply = local_command(user_message)
+
+    if local_reply is not None:
+        messages.append(
+            {
+                "role": "user",
+                "content": user_message
+            }
+        )
+
+        messages.append(
+            {
+                "role": "assistant",
+                "content": local_reply
+            }
+        )
+
+        return local_reply
+
+    # Add user message
+    messages.append(
         {
             "role": "user",
             "content": user_message
         }
     )
 
-    rename_chat_if_needed(
-        chat,
-        user_message
-    )
+    client = get_groq_client()
 
-    local_answer = handle_local_command(
-        user_message
-    )
-
-    if local_answer is not None:
-        chat["messages"].append(
-            {
-                "role": "assistant",
-                "content": local_answer
-            }
+    if client is None:
+        return (
+            "X AI cannot find GROQ_API_KEY. "
+            "Please add GROQ_API_KEY in Streamlit Cloud → Settings → Secrets."
         )
 
-        return local_answer
-
-    messages = [
+    api_messages = [
         {
             "role": "system",
             "content": SYSTEM_PROMPT
         }
     ]
 
-    for item in chat["messages"]:
+    api_messages.extend(messages)
+
+    try:
+
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=api_messages,
+            temperature=0.6,
+            max_completion_tokens=2048,
+            reasoning_effort="low",
+        )
+
+        answer = response.choices[0].message.content
+
+        if not answer:
+            answer = "I didn't receive a response from the model."
+
         messages.append(
             {
-                "role": item["role"],
-                "content": item["content"]
+                "role": "assistant",
+                "content": answer
             }
         )
 
-    answer = ask_groq(messages)
+        return answer
 
-    chat["messages"].append(
-        {
-            "role": "assistant",
-            "content": answer
-        }
-    )
+    except Exception as e:
 
-    return answer
+        # Remove the user message if the API request failed
+        if messages and messages[-1]["role"] == "user":
+            messages.pop()
 
+        error_text = str(e)
+
+        return f"Groq connection error:\n\n`{error_text}`"
+
+
+# ============================================================
+# SIDEBAR
+# ============================================================
 
 with st.sidebar:
-    st.markdown(
-        "<div class='x-logo'>X</div>",
-        unsafe_allow_html=True
-    )
 
-    st.markdown(
-        "<div class='x-subtitle'>Personal Cloud AI</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown("## X")
+
+    st.caption("Personal Cloud AI")
+
+    st.divider()
+
+    st.markdown("### Chats")
 
     if st.button(
         "+ New Chat",
@@ -471,167 +365,176 @@ with st.sidebar:
         create_new_chat()
         st.rerun()
 
-    st.markdown("---")
-    st.markdown("### Chats")
+    chat_names = list(st.session_state.chats.keys())
 
-    if not st.session_state.chats:
-        st.caption("No chats yet.")
+    selected_chat = st.selectbox(
+        "Your chats",
+        chat_names,
+        index=chat_names.index(
+            st.session_state.current_chat
+        ),
+        label_visibility="collapsed",
+    )
 
-    else:
-        for index, chat_item in enumerate(
-            st.session_state.chats
-        ):
-            col1, col2 = st.columns([5, 1])
+    if selected_chat != st.session_state.current_chat:
+        st.session_state.current_chat = selected_chat
+        st.rerun()
 
-            with col1:
-                if st.button(
-                    chat_item["name"],
-                    key="open_chat_" + str(index),
-                    use_container_width=True
-                ):
-                    st.session_state.current_chat = index
-                    st.rerun()
+    st.divider()
 
-            with col2:
-                if st.button(
-                    "X",
-                    key="delete_chat_" + str(index)
-                ):
-                    delete_chat(index)
-                    st.rerun()
-
-    st.markdown("---")
     st.markdown("### X AI")
 
-    st.caption(
-        "Model: " + MODEL
+    st.markdown(
+        f"""
+        <div class="info-card">
+            <div class="info-title">Model</div>
+            <div class="info-value">{MODEL}</div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-title">Engine</div>
+            <div class="info-value">Groq Cloud</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    st.caption(
-        "Engine: Groq Cloud"
-    )
-
-    st.markdown("---")
+    st.divider()
 
     if st.button(
-        "Clear All Chats",
+        "Clear Conversation",
         use_container_width=True
     ):
-        st.session_state.chats = []
-        st.session_state.current_chat = None
+        clear_current_chat()
         st.rerun()
 
 
-chat = get_current_chat()
+# ============================================================
+# MAIN HEADER
+# ============================================================
 
-if chat is None or len(chat["messages"]) == 0:
+st.markdown(
+    '<div class="x-title">X</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    '<div class="x-subtitle">Personal Cloud AI</div>',
+    unsafe_allow_html=True
+)
+
+
+# ============================================================
+# WELCOME
+# ============================================================
+
+messages = get_current_messages()
+
+if len(messages) == 0:
+
     st.markdown(
-        "<div class='welcome-card'>"
-        "<div class='welcome-x'>X</div>"
-        "<div class='welcome-title'>How can I help you?</div>"
-        "<div class='welcome-text'>"
-        "Ask questions, learn something new, write code, "
-        "solve problems or study with X AI."
-        "</div>"
-        "</div>",
-        unsafe_allow_html=True
+        """
+        <div class="welcome">
+
+        <h2>Welcome to X AI</h2>
+
+        <p>
+        Your personal AI assistant powered by Groq Cloud.
+        </p>
+
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    st.markdown(
-        "<div class='quick-title'>Quick Start</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown("### Quick Start")
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         if st.button(
             "Explain Python",
             use_container_width=True
         ):
-            create_new_chat()
-
-            ask_x(
-                "Teach me Python programming from beginner level."
+            st.session_state.pending_prompt = (
+                "Teach me Python programming from the basics "
+                "with simple examples."
             )
-
             st.rerun()
 
     with col2:
         if st.button(
-            "Help Me Study",
+            "Help me study",
             use_container_width=True
         ):
-            create_new_chat()
-
-            ask_x(
-                "Help me study. Ask me what subject and topic I want to learn."
+            st.session_state.pending_prompt = (
+                "Help me study. Ask me what subject and topic "
+                "I want to learn, then teach it step by step."
             )
-
             st.rerun()
-
-    col3, col4 = st.columns(2)
 
     with col3:
         if st.button(
-            "Teach Me Something",
+            "Teach me something",
             use_container_width=True
         ):
-            create_new_chat()
-
-            ask_x(
-                "Teach me one interesting and useful concept."
+            st.session_state.pending_prompt = (
+                "Teach me one interesting and useful concept "
+                "in a simple way."
             )
-
-            st.rerun()
-
-    with col4:
-        if st.button(
-            "AutoCAD Help",
-            use_container_width=True
-        ):
-            create_new_chat()
-
-            ask_x(
-                "Help me learn AutoCAD basics."
-            )
-
             st.rerun()
 
 
-if chat is not None:
-    for message in chat["messages"]:
-        content = message["content"]
+# ============================================================
+# DISPLAY CHAT
+# ============================================================
 
-        safe_content = (
-            content
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\n", "<br>")
-        )
+for message in messages:
 
-        if message["role"] == "user":
-            st.markdown(
-                "<div class='user-message'>"
-                "<div class='message-label'>You</div>"
-                + safe_content
-                + "</div>",
-                unsafe_allow_html=True
-            )
-
-        else:
-            st.markdown(
-                "<div class='assistant-message'>"
-                "<div class='message-label'>X AI</div>"
-                + safe_content
-                + "</div>",
-                unsafe_allow_html=True
-            )
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
 
-user_input = st.chat_input("Message X AI...")
+# ============================================================
+# PENDING QUICK-START PROMPT
+# ============================================================
+
+if "pending_prompt" in st.session_state:
+
+    prompt = st.session_state.pending_prompt
+
+    del st.session_state.pending_prompt
+
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.spinner("X is thinking..."):
+
+        answer = ask_x(prompt)
+
+    with st.chat_message("assistant"):
+        st.markdown(answer)
+
+    st.rerun()
+
+
+# ============================================================
+# CHAT INPUT
+# ============================================================
+
+user_input = st.chat_input(
+    "Message X AI..."
+)
+
 
 if user_input:
-    ask_x(user_input)
-    st.rerun()
+
+    with st.chat_message("user"):
+        st.markdown(user_input)
+
+    with st.spinner("X is thinking..."):
+
+        answer = ask_x(user_input)
+
+    with st.chat_message("assistant"):
+        st.markdown(answer)
