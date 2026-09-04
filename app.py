@@ -8,7 +8,7 @@ from datetime import datetime
 
 
 # ============================================================
-# X AI CONFIGURATION
+# X AI SETTINGS
 # ============================================================
 
 APP_NAME = "X AI"
@@ -17,7 +17,7 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 
 # ============================================================
-# PAGE CONFIGURATION
+# PAGE
 # ============================================================
 
 st.set_page_config(
@@ -46,32 +46,7 @@ if "theme" not in st.session_state:
 # THEME
 # ============================================================
 
-with st.sidebar:
-
-    st.markdown("## X")
-
-    theme_choice = st.radio(
-        "Appearance",
-        ["Dark", "Light"],
-        index=0 if st.session_state.theme == "dark" else 1
-    )
-
-    new_theme = theme_choice.lower()
-
-    if new_theme != st.session_state.theme:
-        st.session_state.theme = new_theme
-        st.rerun()
-
-
-THEME = st.session_state.theme
-
-
-# ============================================================
-# THEME COLORS
-# ============================================================
-
-if THEME == "dark":
-
+if st.session_state.theme == "dark":
     BG = "#080b10"
     SIDEBAR_BG = "#10151c"
     CARD_BG = "#10151c"
@@ -81,9 +56,7 @@ if THEME == "dark":
     MUTED = "#9ba3af"
     BUTTON_BG = "#151c25"
     BUTTON_BORDER = "#303a48"
-
 else:
-
     BG = "#f5f7fa"
     SIDEBAR_BG = "#ffffff"
     CARD_BG = "#ffffff"
@@ -96,7 +69,7 @@ else:
 
 
 # ============================================================
-# CUSTOM CSS
+# CSS
 # ============================================================
 
 st.markdown(
@@ -234,39 +207,6 @@ st.markdown(
         background: transparent;
     }}
 
-    @media (max-width: 768px) {{
-
-        .block-container {{
-            padding-top: 1rem;
-            padding-left: 0.8rem;
-            padding-right: 0.8rem;
-        }}
-
-        .x-logo {{
-            font-size: 44px;
-        }}
-
-        .welcome-card {{
-            padding: 30px 18px;
-        }}
-
-        .welcome-x {{
-            font-size: 55px;
-        }}
-
-        .welcome-title {{
-            font-size: 24px;
-        }}
-
-        .welcome-text {{
-            font-size: 14px;
-        }}
-
-        .quick-title {{
-            font-size: 20px;
-        }}
-    }}
-
     </style>
     """,
     unsafe_allow_html=True
@@ -278,7 +218,6 @@ st.markdown(
 # ============================================================
 
 def create_new_chat():
-
     number = len(st.session_state.chats) + 1
 
     chat = {
@@ -287,14 +226,10 @@ def create_new_chat():
     }
 
     st.session_state.chats.append(chat)
-
-    st.session_state.current_chat = (
-        len(st.session_state.chats) - 1
-    )
+    st.session_state.current_chat = len(st.session_state.chats) - 1
 
 
 def get_current_chat():
-
     index = st.session_state.current_chat
 
     if index is None:
@@ -307,7 +242,6 @@ def get_current_chat():
 
 
 def delete_chat(index):
-
     if index < 0 or index >= len(st.session_state.chats):
         return
 
@@ -316,16 +250,11 @@ def delete_chat(index):
     if len(st.session_state.chats) == 0:
         st.session_state.current_chat = None
 
-    elif st.session_state.current_chat >= len(
-        st.session_state.chats
-    ):
-        st.session_state.current_chat = (
-            len(st.session_state.chats) - 1
-        )
+    elif st.session_state.current_chat >= len(st.session_state.chats):
+        st.session_state.current_chat = len(st.session_state.chats) - 1
 
 
 def rename_chat_if_needed(chat, message):
-
     if len(chat["messages"]) != 1:
         return
 
@@ -366,7 +295,6 @@ def safe_calculate(expression):
             return calculate(node.body)
 
         if isinstance(node, ast.Constant):
-
             if isinstance(node.value, (int, float)):
                 return node.value
 
@@ -375,14 +303,10 @@ def safe_calculate(expression):
             left = calculate(node.left)
             right = calculate(node.right)
 
-            operation = ALLOWED_OPERATORS.get(
-                type(node.op)
-            )
+            operation = ALLOWED_OPERATORS.get(type(node.op))
 
             if operation is None:
-                raise ValueError(
-                    "Operator not allowed"
-                )
+                raise ValueError("Operator not allowed")
 
             return operation(left, right)
 
@@ -390,20 +314,14 @@ def safe_calculate(expression):
 
             value = calculate(node.operand)
 
-            operation = ALLOWED_OPERATORS.get(
-                type(node.op)
-            )
+            operation = ALLOWED_OPERATORS.get(type(node.op))
 
             if operation is None:
-                raise ValueError(
-                    "Operator not allowed"
-                )
+                raise ValueError("Operator not allowed")
 
             return operation(value)
 
-        raise ValueError(
-            "Invalid calculation"
-        )
+        raise ValueError("Invalid calculation")
 
     return calculate(tree)
 
@@ -423,12 +341,9 @@ def handle_local_command(message):
         "what is the time",
         "current time"
     ]:
-
         return (
             "The current local time is "
-            + datetime.now().strftime(
-                "%I:%M:%S %p"
-            )
+            + datetime.now().strftime("%I:%M:%S %p")
         )
 
     if lower in [
@@ -437,12 +352,9 @@ def handle_local_command(message):
         "today",
         "what is today's date"
     ]:
-
         return (
             "Today's date is "
-            + datetime.now().strftime(
-                "%d %B %Y"
-            )
+            + datetime.now().strftime("%d %B %Y")
         )
 
     if lower.startswith("/calc "):
@@ -450,18 +362,14 @@ def handle_local_command(message):
         expression = text[6:].strip()
 
         try:
-
-            result = safe_calculate(
-                expression
-            )
+            result = safe_calculate(expression)
 
             return "Answer: " + str(result)
 
         except Exception:
-
             return (
-                "I couldn't calculate that. "
-                "Try /calc 25*4+10"
+                "I couldn't calculate that.\n\n"
+                "Try: /calc 25*4+10"
             )
 
     if lower in ["/help", "help"]:
@@ -471,6 +379,7 @@ def handle_local_command(message):
             "/time - current time\n\n"
             "/date - today's date\n\n"
             "/calc 25*4+10 - calculator\n\n"
+            "/help - show commands\n\n"
             "You can also ask normal questions."
         )
 
@@ -478,21 +387,35 @@ def handle_local_command(message):
 
 
 # ============================================================
-# SYSTEM PROMPT
+# AI SYSTEM PROMPT
 # ============================================================
 
-SYSTEM_PROMPT = (
-    "You are X AI, a helpful personal AI assistant. "
-    "Give clear and useful answers. "
-    "Help with programming and studying. "
-    "Explain difficult topics simply. "
-    "Help with Python, C, HTML, CSS and JavaScript. "
-    "Help with AutoCAD and technical subjects. "
-    "Show calculations clearly. "
-    "Be friendly and concise. "
-    "When asked for code, provide complete working code. "
-    "Do not claim to have abilities you do not have."
-)
+SYSTEM_PROMPT = """
+You are X AI, a helpful personal AI assistant.
+
+Give clear, useful and accurate answers.
+
+You can help with:
+- Programming
+- Python
+- C
+- HTML
+- CSS
+- JavaScript
+- Mathematics
+- Engineering subjects
+- AutoCAD
+- Studying
+- General questions
+
+Explain difficult topics simply.
+
+When the user asks for code, provide complete working code.
+
+Be friendly and concise.
+
+Do not claim to have abilities you do not have.
+"""
 
 
 # ============================================================
@@ -503,9 +426,7 @@ def get_groq_key():
 
     try:
 
-        key = st.secrets.get(
-            "GROQ_API_KEY"
-        )
+        key = st.secrets.get("GROQ_API_KEY")
 
         if key is None:
             return None
@@ -534,30 +455,30 @@ def ask_groq(messages):
 
         return (
             "X AI is not connected to Groq.\n\n"
-            "Open your Streamlit Cloud app settings, "
-            "go to Secrets, and add GROQ_API_KEY."
+            "Open your Streamlit Cloud app settings "
+            "and add this secret:\n\n"
+            "GROQ_API_KEY\n\n"
+            "Do not put the API key directly inside app.py."
         )
 
     payload = {
         "model": MODEL,
         "messages": messages,
-        "temperature": 0.3,
-        "max_tokens": 2048,
+        "temperature": 0.6,
+        "max_completion_tokens": 2048,
+        "top_p": 0.95,
         "stream": False
     }
 
-    data = json.dumps(
-        payload
-    ).encode("utf-8")
+    data = json.dumps(payload).encode("utf-8")
 
     request = urllib.request.Request(
         GROQ_URL,
         data=data,
         headers={
-            "Content-Type":
-                "application/json",
-            "Authorization":
-                "Bearer " + api_key
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": "Bearer " + api_key
         },
         method="POST"
     )
@@ -570,102 +491,82 @@ def ask_groq(messages):
         ) as response:
 
             result = json.loads(
-                response.read().decode(
-                    "utf-8"
-                )
+                response.read().decode("utf-8")
             )
 
-        choices = result.get(
-            "choices",
-            []
-        )
+        choices = result.get("choices", [])
 
-        if len(choices) > 0:
+        if not choices:
+            return "X AI received an empty response from Groq."
 
-            message = choices[0].get(
-                "message",
-                {}
-            )
+        message = choices[0].get("message", {})
 
-            content = message.get(
-                "content"
-            )
+        content = message.get("content")
 
-            if content:
-                return content
+        if content:
+            return str(content)
 
-        return (
-            "X AI received an unexpected "
-            "response from Groq."
-        )
+        return "X AI received a response without text."
 
     except urllib.error.HTTPError as error:
 
         try:
-
-            details = error.read().decode(
-                "utf-8"
-            )
-
+            details = error.read().decode("utf-8")
         except Exception:
-
             details = ""
 
         if error.code == 400:
 
             return (
-                "Groq rejected the request.\n\n"
-                "The model or request format "
-                "may be invalid.\n\n"
-                "Model: " + MODEL
+                "Groq returned HTTP 400.\n\n"
+                "The request was rejected.\n\n"
+                "Model: " + MODEL + "\n\n"
+                "Details:\n" + details
             )
 
         if error.code == 401:
 
             return (
-                "Groq rejected the API key.\n\n"
-                "Please check GROQ_API_KEY "
-                "in Streamlit Cloud Secrets."
+                "Groq returned HTTP 401.\n\n"
+                "Your GROQ_API_KEY is invalid or expired.\n\n"
+                "Check the key in Streamlit Cloud Secrets."
             )
 
         if error.code == 403:
 
             return (
-                "Groq returned 403 Forbidden.\n\n"
-                "The API key is being received, "
-                "but Groq is refusing this request.\n\n"
-                "Model: " + MODEL
-                + "\n\n"
-                "Groq response:\n"
-                + details
+                "Groq returned HTTP 403.\n\n"
+                "The request was forbidden.\n\n"
+                "Model: " + MODEL + "\n\n"
+                "Details:\n" + details
             )
 
         if error.code == 429:
 
             return (
-                "Groq rate limit reached.\n\n"
-                "Please wait and try again."
+                "Groq returned HTTP 429.\n\n"
+                "The rate limit was reached. "
+                "Please try again later."
             )
 
         return (
-            "Groq error "
+            "Groq returned HTTP "
             + str(error.code)
-            + ":\n\n"
+            + ".\n\n"
             + details
         )
 
     except urllib.error.URLError as error:
 
         return (
-            "X AI could not connect to "
-            "Groq Cloud.\n\n"
+            "X AI could not connect to Groq Cloud.\n\n"
             + str(error)
         )
 
     except Exception as error:
 
         return (
-            "X AI connection error:\n\n"
+            "X AI connection error.\n\n"
             + str(error)
         )
 
@@ -681,7 +582,6 @@ def ask_x(user_message):
     if chat is None:
 
         create_new_chat()
-
         chat = get_current_chat()
 
     chat["messages"].append(
@@ -755,6 +655,23 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
+    theme_choice = st.radio(
+        "Appearance",
+        ["Dark", "Light"],
+        index=(
+            0
+            if st.session_state.theme == "dark"
+            else 1
+        )
+    )
+
+    new_theme = theme_choice.lower()
+
+    if new_theme != st.session_state.theme:
+
+        st.session_state.theme = new_theme
+        st.rerun()
+
     if st.button(
         "+ New Chat",
         use_container_width=True
@@ -815,7 +732,8 @@ with st.sidebar:
     )
 
     st.caption(
-        "Theme: " + THEME.title()
+        "Theme: "
+        + st.session_state.theme.title()
     )
 
     st.markdown("---")
@@ -840,9 +758,7 @@ st.markdown(
 )
 
 st.markdown(
-    "<div class='x-subtitle'>"
-    "Personal AI Assistant"
-    "</div>",
+    "<div class='x-subtitle'>Personal AI Assistant</div>",
     unsafe_allow_html=True
 )
 
@@ -858,29 +774,26 @@ chat = get_current_chat()
 # WELCOME SCREEN
 # ============================================================
 
-if chat is None or len(
-    chat["messages"]
-) == 0:
+if chat is None or len(chat["messages"]) == 0:
 
     st.markdown(
-        "<div class='welcome-card'>"
-        "<div class='welcome-x'>X</div>"
-        "<div class='welcome-title'>"
-        "How can I help you?"
-        "</div>"
-        "<div class='welcome-text'>"
-        "Ask questions, learn something new, "
-        "write code, solve problems or study "
-        "with X AI."
-        "</div>"
-        "</div>",
+        """
+        <div class='welcome-card'>
+            <div class='welcome-x'>X</div>
+            <div class='welcome-title'>
+                How can I help you?
+            </div>
+            <div class='welcome-text'>
+                Ask questions, learn something new,
+                write code, solve problems or study with X AI.
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
     st.markdown(
-        "<div class='quick-title'>"
-        "Quick Start"
-        "</div>",
+        "<div class='quick-title'>Quick Start</div>",
         unsafe_allow_html=True
     )
 
@@ -896,8 +809,7 @@ if chat is None or len(
             create_new_chat()
 
             ask_x(
-                "Teach me Python programming "
-                "from beginner level."
+                "Teach me Python programming from beginner level."
             )
 
             st.rerun()
@@ -912,8 +824,7 @@ if chat is None or len(
             create_new_chat()
 
             ask_x(
-                "Help me study. Ask me what "
-                "subject and topic I want to learn."
+                "Help me study. Ask me what subject and topic I want to learn."
             )
 
             st.rerun()
@@ -930,8 +841,7 @@ if chat is None or len(
             create_new_chat()
 
             ask_x(
-                "Teach me one interesting "
-                "and useful concept."
+                "Teach me one interesting and useful concept."
             )
 
             st.rerun()
@@ -963,7 +873,7 @@ if chat is not None:
         content = message["content"]
 
         safe_content = (
-            content
+            str(content)
             .replace("&", "&amp;")
             .replace("<", "&lt;")
             .replace(">", "&gt;")
@@ -974,9 +884,7 @@ if chat is not None:
 
             st.markdown(
                 "<div class='user-message'>"
-                "<div class='message-label'>"
-                "You"
-                "</div>"
+                "<div class='message-label'>You</div>"
                 + safe_content
                 + "</div>",
                 unsafe_allow_html=True
@@ -986,9 +894,7 @@ if chat is not None:
 
             st.markdown(
                 "<div class='assistant-message'>"
-                "<div class='message-label'>"
-                "X AI"
-                "</div>"
+                "<div class='message-label'>X AI</div>"
                 + safe_content
                 + "</div>",
                 unsafe_allow_html=True
@@ -1003,9 +909,7 @@ user_input = st.chat_input(
     "Message X AI..."
 )
 
-
 if user_input:
 
     ask_x(user_input)
-
     st.rerun()
