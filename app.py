@@ -1,10 +1,9 @@
 import streamlit as st
-import urllib.request
-import urllib.error
 import json
 import ast
 import operator
 from datetime import datetime
+from groq import Groq
 
 
 # ============================================================
@@ -13,7 +12,6 @@ from datetime import datetime
 
 APP_NAME = "X AI"
 MODEL = "openai/gpt-oss-20b"
-GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 
 # ============================================================
@@ -56,6 +54,7 @@ if st.session_state.theme == "dark":
     MUTED = "#9ba3af"
     BUTTON_BG = "#151c25"
     BUTTON_BORDER = "#303a48"
+
 else:
     BG = "#f5f7fa"
     SIDEBAR_BG = "#ffffff"
@@ -185,12 +184,6 @@ st.markdown(
         color: {TEXT};
     }}
 
-    div[data-baseweb="select"] > div {{
-        background: {BUTTON_BG};
-        border-color: {BUTTON_BORDER};
-        color: {TEXT};
-    }}
-
     [data-testid="stChatInput"] {{
         background: {CARD_BG};
     }}
@@ -218,6 +211,7 @@ st.markdown(
 # ============================================================
 
 def create_new_chat():
+
     number = len(st.session_state.chats) + 1
 
     chat = {
@@ -230,6 +224,7 @@ def create_new_chat():
 
 
 def get_current_chat():
+
     index = st.session_state.current_chat
 
     if index is None:
@@ -242,19 +237,23 @@ def get_current_chat():
 
 
 def delete_chat(index):
+
     if index < 0 or index >= len(st.session_state.chats):
         return
 
     st.session_state.chats.pop(index)
 
     if len(st.session_state.chats) == 0:
+
         st.session_state.current_chat = None
 
     elif st.session_state.current_chat >= len(st.session_state.chats):
+
         st.session_state.current_chat = len(st.session_state.chats) - 1
 
 
 def rename_chat_if_needed(chat, message):
+
     if len(chat["messages"]) != 1:
         return
 
@@ -295,6 +294,7 @@ def safe_calculate(expression):
             return calculate(node.body)
 
         if isinstance(node, ast.Constant):
+
             if isinstance(node.value, (int, float)):
                 return node.value
 
@@ -341,6 +341,7 @@ def handle_local_command(message):
         "what is the time",
         "current time"
     ]:
+
         return (
             "The current local time is "
             + datetime.now().strftime("%I:%M:%S %p")
@@ -352,6 +353,7 @@ def handle_local_command(message):
         "today",
         "what is today's date"
     ]:
+
         return (
             "Today's date is "
             + datetime.now().strftime("%d %B %Y")
@@ -362,11 +364,13 @@ def handle_local_command(message):
         expression = text[6:].strip()
 
         try:
+
             result = safe_calculate(expression)
 
             return "Answer: " + str(result)
 
         except Exception:
+
             return (
                 "I couldn't calculate that.\n\n"
                 "Try: /calc 25*4+10"
@@ -419,24 +423,21 @@ Do not claim to have abilities you do not have.
 
 
 # ============================================================
-# GROQ API KEY
+# GROQ CLIENT
 # ============================================================
 
-def get_groq_key():
+def get_groq_client():
 
     try:
 
-        key = st.secrets.get("GROQ_API_KEY")
+        api_key = st.secrets["GROQ_API_KEY"]
 
-        if key is None:
+        if not api_key:
             return None
 
-        key = str(key).strip()
-
-        if not key:
-            return None
-
-        return key
+        return Groq(
+            api_key=str(api_key).strip()
+        )
 
     except Exception:
 
@@ -449,125 +450,43 @@ def get_groq_key():
 
 def ask_groq(messages):
 
-    api_key = get_groq_key()
+    client = get_groq_client()
 
-    if api_key is None:
+    if client is None:
 
         return (
             "X AI is not connected to Groq.\n\n"
-            "Open your Streamlit Cloud app settings "
-            "and add this secret:\n\n"
-            "GROQ_API_KEY\n\n"
-            "Do not put the API key directly inside app.py."
+            "Please check that your Streamlit Cloud Secrets "
+            "contains GROQ_API_KEY."
         )
-
-    payload = {
-        "model": MODEL,
-        "messages": messages,
-        "temperature": 0.6,
-        "max_completion_tokens": 2048,
-        "top_p": 0.95,
-        "stream": False
-    }
-
-    data = json.dumps(payload).encode("utf-8")
-
-    request = urllib.request.Request(
-        GROQ_URL,
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": "Bearer " + api_key
-        },
-        method="POST"
-    )
 
     try:
 
-        with urllib.request.urlopen(
-            request,
-            timeout=120
-        ) as response:
+        completion = client.chat.completions.create(
+            model=MODEL,
+            messages=messages,
+            temperature=0.6,
+            max_completion_tokens=2048,
+            top_p=0.95,
+            stream=False
+        )
 
-            result = json.loads(
-                response.read().decode("utf-8")
-            )
-
-        choices = result.get("choices", [])
-
-        if not choices:
-            return "X AI received an empty response from Groq."
-
-        message = choices[0].get("message", {})
-
-        content = message.get("content")
+        content = completion.choices[0].message.content
 
         if content:
+
             return str(content)
 
-        return "X AI received a response without text."
-
-    except urllib.error.HTTPError as error:
-
-        try:
-            details = error.read().decode("utf-8")
-        except Exception:
-            details = ""
-
-        if error.code == 400:
-
-            return (
-                "Groq returned HTTP 400.\n\n"
-                "The request was rejected.\n\n"
-                "Model: " + MODEL + "\n\n"
-                "Details:\n" + details
-            )
-
-        if error.code == 401:
-
-            return (
-                "Groq returned HTTP 401.\n\n"
-                "Your GROQ_API_KEY is invalid or expired.\n\n"
-                "Check the key in Streamlit Cloud Secrets."
-            )
-
-        if error.code == 403:
-
-            return (
-                "Groq returned HTTP 403.\n\n"
-                "The request was forbidden.\n\n"
-                "Model: " + MODEL + "\n\n"
-                "Details:\n" + details
-            )
-
-        if error.code == 429:
-
-            return (
-                "Groq returned HTTP 429.\n\n"
-                "The rate limit was reached. "
-                "Please try again later."
-            )
-
-        return (
-            "Groq returned HTTP "
-            + str(error.code)
-            + ".\n\n"
-            + details
-        )
-
-    except urllib.error.URLError as error:
-
-        return (
-            "X AI could not connect to Groq Cloud.\n\n"
-            + str(error)
-        )
+        return "X AI received an empty response from Groq."
 
     except Exception as error:
 
+        error_text = str(error)
+
         return (
-            "X AI connection error.\n\n"
-            + str(error)
+            "X AI could not connect to Groq.\n\n"
+            "Error:\n"
+            + error_text
         )
 
 
@@ -694,9 +613,7 @@ with st.sidebar:
             st.session_state.chats
         ):
 
-            col1, col2 = st.columns(
-                [5, 1]
-            )
+            col1, col2 = st.columns([5, 1])
 
             with col1:
 
@@ -723,13 +640,9 @@ with st.sidebar:
 
     st.markdown("### X AI")
 
-    st.caption(
-        "Model: " + MODEL
-    )
+    st.caption("Model: " + MODEL)
 
-    st.caption(
-        "Engine: Groq Cloud"
-    )
+    st.caption("Engine: Groq Cloud")
 
     st.caption(
         "Theme: "
